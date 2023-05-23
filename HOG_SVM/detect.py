@@ -1,5 +1,6 @@
 import numpy as np
 import cv2, joblib, argparse
+from utils.plots import plot_one_box
 
 
 def sliding_windows(img, window_size, stride):
@@ -8,16 +9,21 @@ def sliding_windows(img, window_size, stride):
             yield (x, y, img[y : y + window_size[1], x : x + window_size[0]])
 
 
-def main(source, model, output, isView):
+def main(source, model, output, isView, stride, width, height):
     # Initialize 
     img = cv2.imread(source)
-    img = cv2.resize(img, [])
+    img = cv2.resize(img, [width, height])
     model = joblib.load(model)
-    stride = [9, 9] # Step size
+    stride = [stride, stride] # Step size
     window_size = [64, 128] # Train img size
 
-
+    # Non-max-suppression
     
+    # Draw bounding boxes
+
+    # Show image
+    if isView:
+        cv2.imshow(output, img)
     
 
 if __name__ == '__main__':
@@ -27,7 +33,10 @@ if __name__ == '__main__':
     parser.add_argument('-m', '--model', type=str, default='./models/LinearSVC.dat', help='path of trained model')
     parser.add_argument('-o', '--output', default='output.jpg', help='output file', required=True)
     parser.add_argument('-v', '--view', action='store_true', help='view output')
+    parser.add_argument('--stride', type=int, default=9, help='step size')
+    parser.add_argument('-w', '--width', type=int, default=400, help='image width')
+    parser.add_argument('-h', '--height', type=int, default=256, help='image height')
     
     args = parser.parse_args()
 
-    main(args.source, args.model, args.output, args.view)
+    main(args.source, args.model, args.output, args.view, args.stride, args.width, args.height)
