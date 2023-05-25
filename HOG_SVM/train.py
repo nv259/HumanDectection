@@ -1,4 +1,4 @@
-import cv2, glob, os, joblib
+import cv2, glob, os, joblib, argparse
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
@@ -12,25 +12,31 @@ X = []
 y = []
 
 # Environment
-pos_im = './images/Train/pos'
-neg_im = './images/Train/neg'
+train_pos_im = './images/Train/pos'
+train_neg_im = './images/Train/neg'
+test_pos_im = './images/Test/pos'
+test_neg_im = './images/Test/neg'
 
 
 def load_features(path, cls):
     for filename in glob.glob(os.path.join(path, '*')):
-        if cls == 1:
-            # Read image using PIL then convert to cv2
+        img = cv2.imread(filename)
+            
+        if img is None:
+            # Some file can't be read by cv2, use PIL instead
             img = np.array(Image.open(filename).convert('RGB'))
             img = img[:, :, ::-1].copy()
-        else:
-            img = cv2.imread(filename)
-
+            
+        print(filename)
+        print(img.shape)
+        
         # Convert to grayscale and resize img to 64x128
         img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         img = cv2.resize(img, (64, 128))
 
         # Calculate Histogram of Oriented Gradient (HOG)
         img_hog = hog(img, orientations=9, pixels_per_cell=(8, 8), visualize=False, cells_per_block=(3, 3))
+
         X.append(img_hog)
         y.append(cls)
 
@@ -50,11 +56,21 @@ def main():
     global X, y
 
     # Load features from Train set
-    load_features(neg_im, 0)
-    load_features(pos_im, 1)
+    load_features(train_neg_im, 0)
+    load_features(train_pos_im, 1)
+    X_train = np.float32(X)
+    y_train = np.array(y)
+    
+    X = []
+    y = [] 
+    
+    load_features(test_neg_im, 0) 
+    load_features(test_pos_im, 1)
+    X_test = np.float32(X)
+    y_test = np.array(y)
 
     # Split original Train set into Train and Test
-    X_train, X_test, y_train, y_test = split_data(X, y, test_size=0.3)
+    # X_train, X_test, y_train, y_test = split_data(X, y, test_size=0.3)
 
     # Build model
     svm_clf = svm.LinearSVC()
