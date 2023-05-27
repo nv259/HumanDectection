@@ -8,6 +8,8 @@ import cv2
 from skimage.feature import hog 
 from skimage.transform import pyramid_gaussian
 from imutils.object_detection import non_max_suppression
+import time 
+import re
 
 
 model = joblib.load('./models/LinearSVC.dat')
@@ -21,10 +23,11 @@ def get_annotations(filename):
         lines = f.readlines()
         
         for line in lines:
-            if 'Bounding box for object' in line:
-                pass             
-        
-    return gt_boxes
+            if 'Bounding box for object' in line: 
+                gt_boxes.append(list(map(int, re.findall("[-+]?[.]?[\d]+(?:,\d\d\d)*[\.]?\d*(?:[eE][-+]?\d+)?", line)[1:])))
+                print(gt_boxes) 
+
+    return np.array(gt_boxes)
 
 
 def sliding_windows(img, window_size, stride):
@@ -33,8 +36,8 @@ def sliding_windows(img, window_size, stride):
             yield (x, y, img[y : y + window_size[1], x : x + window_size[0]])
 
 
-def process_one_image(filename, width=400, height=256, spatial_window_shape=[64, 128], stride=[9, 9], downscale=1.25, 
-                      output='./output.jpg', overlap_thresh=0.2, conf=1.2):
+def process_one_image(filename, width=400, height=256, spatial_window_shape=[64, 128], stride=[9, 9], downscale=1.25
+                      , overlap_thresh=0.2, conf=1.2):
     # Initialize
     global model
 
@@ -88,6 +91,13 @@ def process_one_image(filename, width=400, height=256, spatial_window_shape=[64,
     scores = np.array(scores)
     bounding_boxes = non_max_suppression(bounding_boxes, probs=scores, overlapThresh=overlap_thresh)
 
+    # Return coordinates in origin image
+    for bb in bounding_boxes:
+        bb[0] = bb[0] * (origin_size[0] / width)
+        bb[1] = bb[1] * (origin_size[1] / height)
+        bb[2] = bb[2] * (origin_size[0] / width)
+        bb[3] = bb[3] * (origin_size[1] / height)
+        
     return bounding_boxes
 
 
