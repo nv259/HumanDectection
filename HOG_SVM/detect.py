@@ -2,6 +2,7 @@ import random
 import sys
 sys.path.append('D:\\repo\\HumanDectection\\HOG_SVM')
 sys.path.append('D:\\repo\\HumanDectection\\HOG_SVM\\yolov7')
+import time
 
 # suppress warning
 import warnings
@@ -51,7 +52,7 @@ def do_hard_negative_mining(bbs, filename, origin_size, scaled_size):
 
         # hard negative mining
         for xywh in sub_detector.detect(filename):
-            if IoU(pick, xywh2xyxy(xywh, origin_size[0], origin_size[1])) > 0.05:
+            if IoU(pick, xywh2xyxy(xywh, origin_size[0], origin_size[1])) > 0.1:
                 intersect_count = intersect_count + 1
 
         if intersect_count == 0:
@@ -62,8 +63,8 @@ def do_hard_negative_mining(bbs, filename, origin_size, scaled_size):
             cv2.imwrite("D:\\repo\\HumanDectection\\HOG_SVM\\images\\Train\\neg\\" + str(random.randint(111111, 999999)) + '.jpg', img)
 
 
-def process_one_image(filename, width, height, spatial_window_shape, stride, downscale, output, is_view,
-                      hard_negative_mining, overlap_thresh, conf):
+def process_one_image(filename, width=400, height=256, spatial_window_shape=[64, 128], stride=[9, 9], downscale=1.25, 
+                      output='./output.jpg', is_view=False, hard_negative_mining=False, overlap_thresh=0.2, conf=1.2, eval=False):
     # Initialize
     global model
 
@@ -130,6 +131,8 @@ def process_one_image(filename, width, height, spatial_window_shape, stride, dow
     # hard negative mining
     if hard_negative_mining:
         do_hard_negative_mining(bounding_boxes, filename, origin_size, [width, height])
+    elif eval:
+        return bounding_boxes
     else:
         cv2.imwrite('./run/' + os.path.split(filename)[1], img)
         print("Successfully saved in run/" + os.path.split(filename)[1])
@@ -142,6 +145,8 @@ def main(source, model_source, output, is_view, stride, width, height, downscale
     global model
 
     model = joblib.load(model_source)
+    print(model.coef_.shape)
+    time.sleep(10)
     spatial_window_shape = [64, 128]  # size of sliding window
     stride = [stride, stride]  # Step size
 
@@ -173,7 +178,7 @@ if __name__ == '__main__':
     parser.add_argument('--hard-negative-mining', action='store_true', help='enable hard negative mining (source must '
                                                                             'be a folder, not image)')
     parser.add_argument('-t', '--overlap_thresh', type=float, default=0.2, help='Overlap thresh for non-max suppression')
-    parser.add_argument('-c', '--confidence-score', type=float, default=0.5, help='Threshold for confidence score')
+    parser.add_argument('-c', '--confidence-score', type=float, default=1.2, help='Threshold for confidence score')
 
     args = parser.parse_args()
     

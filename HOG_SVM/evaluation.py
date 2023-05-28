@@ -25,7 +25,6 @@ def get_annotations(filename):
         for line in lines:
             if 'Bounding box for object' in line: 
                 gt_boxes.append(list(map(int, re.findall("[-+]?[.]?[\d]+(?:,\d\d\d)*[\.]?\d*(?:[eE][-+]?\d+)?", line)[1:])))
-                print(gt_boxes) 
 
     return np.array(gt_boxes)
 
@@ -65,7 +64,7 @@ def process_one_image(filename, width=400, height=256, spatial_window_shape=[64,
             spatial_window = spatial_window * 255
             spatial_window = spatial_window.astype(np.uint8)
             spatial_window = cv2.cvtColor(spatial_window, cv2.COLOR_BGR2GRAY)
-            # spatial_window = color.rgb2gray(spatial_window)
+
             hog_spatial_window = hog(spatial_window, orientations=9, pixels_per_cell=(8, 8),
                                      visualize=False, cells_per_block=(3, 3))
             hog_spatial_window = hog_spatial_window.reshape(1, -1)
@@ -75,7 +74,6 @@ def process_one_image(filename, width=400, height=256, spatial_window_shape=[64,
             if y_pred == 1:
                 score = model.decision_function(hog_spatial_window)
                 # print(score)
-                # print('human')
                 if score > conf:
                     # Append new bounding box
                     # print('surely human')
@@ -102,32 +100,44 @@ def process_one_image(filename, width=400, height=256, spatial_window_shape=[64,
 
 
 def main():
-    for img in glob.glob(os.path.join(eval_images, "*")):
-        # Get bounding boxes and ground truth boxes
-        print(img)
-        bounding_boxes = process_one_image(img)
-        print('#bbes:', bounding_boxes.shape)
-        gt_boxes = get_annotations(os.path.split(img)[1][:-4] + '.txt')
-        
-        # Count True Positive
-        true_positive = 0  
-        for bounding_box in bounding_boxes:
-            count = 0
-            for gt_box in gt_boxes:
-                if IoU(bounding_box, gt_box) >= 0.5:
-                    count = count + 1
-            if count != 0:
-                true_positive = true_positive + 1
-        
-        # Precision
-        precision = 0 
-        
-        # Recall 
-        recall = 0
-        
-        # F1-score
-        f1_score = 2 * (precision * recall) / (precision + recall)
-        
+    confs = np.arange(start=1, stop=2, step=0.1)
+    confs = [2]
+    # print(confs)
+    with open('conf_threshold.txt', 'a') as f:
+        for conf in confs:
+            f.write(f"{conf}\n")
+            print(conf)
+            true_positive = 0
+            total_predictions = 0
+            total_ground_truths = 0
+            
+            for img in glob.glob(os.path.join(eval_images, "*")):
+                # Get bounding boxes and ground truth boxes
+                bounding_boxes = process_one_image(img, conf=conf)
+                total_predictions = total_predictions + len(bounding_boxes)
+                gt_boxes = get_annotations(os.path.split(img)[1][:-4] + '.txt')
+                total_ground_truths = total_ground_truths + len(gt_boxes)
+                
+                # Count true positive bb on current images
+                for bounding_box in bounding_boxes:
+                    count = 0
+                    for gt_box in gt_boxes:
+                        if IoU(bounding_box, gt_box) >= 0.5:
+                            count = count + 1
+                    if count != 0:
+                        true_positive = true_positive + 1
+                
+
+            # Precision and Recall
+            precision = true_positive / total_predictions
+            recall = true_positive / total_ground_truths
+                
+            # F1-score
+            f1_score = 2 * (precision * recall) / (precision + recall)
+            
+            f.write(f"{precision} {recall} {f1_score}\n") 
+            print(precision, recall, f1_score)
+
 
 if __name__ == '__main__':
     main()

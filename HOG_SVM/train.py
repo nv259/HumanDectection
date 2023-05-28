@@ -14,8 +14,9 @@ y = []
 # Environment
 train_pos_im = './images/Train/pos'
 train_neg_im = './images/Train/neg'
-test_pos_im = './images/Test/pos'
+# test_pos_im = './images/Test/pos'
 test_neg_im = './images/Test/neg'
+test_pos_im = 'D:\\repo\\HumanDectection\\HOG_SVM\\Datasets\\PRW-v16.04.20\\PRW-v16.04.20\\query_box'
 
 
 def load_features(path, cls):
@@ -27,8 +28,8 @@ def load_features(path, cls):
             img = np.array(Image.open(filename).convert('RGB'))
             img = img[:, :, ::-1].copy()
             
-        print(filename)
-        print(img.shape)
+        # print(filename)
+        # print(img.shape)
         
         # Convert to grayscale and resize img to 64x128
         img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -56,10 +57,10 @@ def main():
     global X, y
 
     # Load features from Train set
-    load_features(train_neg_im, 0)
-    load_features(train_pos_im, 1)
-    X_train = np.float32(X)
-    y_train = np.array(y)
+    # load_features(train_neg_im, 0)
+    # load_features(train_pos_im, 1)
+    # X_train = np.float32(X)
+    # y_train = np.array(y)
     
     X = []
     y = [] 
@@ -73,16 +74,16 @@ def main():
     # X_train, X_test, y_train, y_test = split_data(X, y, test_size=0.3)
 
     # Build model
-    svm_clf = svm.LinearSVC()
-    svm_clf.fit(X_train, y_train)
-
+    # svm_clf = svm.LinearSVC()
+    # svm_clf.fit(X_train, y_train)
+    svm_clf = joblib.load('./models/LinearSVC.dat')
     # Confusion matrix
     y_pred = svm_clf.predict(X_test)
     print(f'Classification report for classifier {svm_clf}')
     print(f'{metrics.classification_report(y_test, y_pred)}')
 
     # Save model
-    joblib.dump(svm_clf, "./models/LinearSVC.dat")
+    # joblib.dump(svm_clf, "./models/LinearSVC.dat")
     print('Model saved!')
 
 
